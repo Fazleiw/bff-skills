@@ -3,8 +3,9 @@
 ## Decision order
 1. Run `doctor` first. If it fails, stop and surface the blocker.
 2. Run `pool-health` against the target pool.
-3. Inspect the returned `health`, `imbalanceRatio`, and `slippageEstimateBps`.
-4. Route on the result:
+3. If the pool category is `DLMM`, treat it as a HODLMM-specific inspection and pay special attention to pool composition skew.
+4. Inspect the returned `health`, `imbalanceRatio`, `slippageEstimateBps`, and HODLMM-related pool metadata.
+5. Route on the result:
    - healthy -> safe to consider execution
    - watch -> reduce size or inspect deeper
    - avoid -> do not route size into this pool without confirmation

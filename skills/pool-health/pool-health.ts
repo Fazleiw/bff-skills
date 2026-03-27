@@ -147,6 +147,24 @@ async function main() {
     }
   }
 
+  if (command === 'install-packs') {
+    out({
+      status: 'success',
+      action: 'Install the HODLMM-aware pool monitoring pack.',
+      data: {
+        packs: [
+          {
+            name: 'all',
+            description: 'Pool Health monitoring pack with Bitflow + HODLMM/DLMM coverage.',
+            category,
+            endpoints: { categoriesUrl, metricsUrl, groupedUrl }
+          }
+        ]
+      },
+      error: null
+    });
+  }
+
   if (command === 'run') {
     try {
       const [grouped, metrics] = await Promise.all([
@@ -170,6 +188,10 @@ async function main() {
           poolId: pool.poolId,
           poolContract: pool.poolContract,
           category: pool.category,
+          hodlmm: {
+            integrated: String(pool.category || '').includes('DLMM'),
+            mode: String(pool.category || '').includes('DLMM') ? 'HODLMM/DLMM' : 'standard-pool'
+          },
           tradeSizeUsd,
           tokens: {
             tokenX: pool.tokenX ? { symbol: pool.tokenX.symbol ?? null, contract: pool.tokenX.contract ?? pool.tokenX.tokenContract ?? null } : null,
