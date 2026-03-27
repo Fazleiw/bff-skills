@@ -52,6 +52,18 @@ HODLMM is not decorative here. It is explicitly in:
 - execution wrapper validation path
 - intended onchain strategy routing
 
+## Step-by-step usage
+1. Define strategy intent offchain.
+2. Run `strategy-policy.ts run` to compile canonical policy JSON and produce `policy_hash`.
+3. Commit the policy onchain through the registry contract path.
+4. Run `strategy-execute.ts run` with the committed policy to validate the proposed action.
+5. Only if allowed, execute the HODLMM / Bitflow action.
+6. Capture the resulting tx hash.
+7. Record the execution onchain with the same `strategy_id` so observers can trace policy -> skill -> tx.
+
+## End goal
+The goal is not to make an agent look smart. The goal is to make execution auditable. An observer should be able to verify what policy was committed, who executed it, what actions were allowed, and whether the final HODLMM/Bitflow action obeyed those limits.
+
 ## Known constraints
 - Current version defines policy + execution wrappers and the registry contract draft.
 - Full production execution still requires target contract addresses and final deployment path.
