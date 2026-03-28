@@ -1,55 +1,115 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
-import { decideYieldAction } from './yield-decision';
+const https = require('https');
 
-function arg(name: string, fallback?: string) {
+function arg(name, fallback) {
   const idx = process.argv.indexOf(name);
   return idx >= 0 && process.argv[idx + 1] ? process.argv[idx + 1] : fallback;
 }
 
-function out(payload: any, code = 0) {
-  console.log(JSON.stringify(payload, null, 2));
-  process.exit(code);
-}
-
-const command = process.argv[2];
-
-if (command === 'doctor') {
-  out({
-    status: 'success',
-    action: 'Yield guard ready.',
-    data: {
-      commands: ['doctor', 'run'],
-      focus: 'HODLMM-first threshold-based yield decisioning'
-    },
-    error: null
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (err) {
+          reject(new Error(`JSON parse failure for ${url}: ${err.message}`));
+        }
+      });
+    }).on('error', (err) => reject(new Error(`HTTP failure for ${url}: ${err.message}`)));
   });
 }
 
-if (command === 'run') {
-  const currentYield = Number(arg('--current-yield', '0'));
-  const bestAvailableYield = Number(arg('--best-yield', '0'));
-  const minAcceptableYield = Number(arg('--min-acceptable-yield', '0'));
-  const minRotationDelta = Number(arg('--min-rotation-delta', '0'));
-
-  const decision = decideYieldAction({ currentYield, bestAvailableYield, minAcceptableYield, minRotationDelta });
-  out({
-    status: 'success',
-    action: decision,
-    data: {
-      currentYield,
-      bestAvailableYield,
-      minAcceptableYield,
-      minRotationDelta,
-      decision
-    },
-    error: null
-  });
+function decideYieldAction({ currentYield, bestYield, threshold, minDelta }) {
+  if (currentYield < threshold) return 'rotate';
+  if ((bestYield - currentYield) >= minDelta) return 'rotate';
+  return 'stay';
 }
 
-out({
-  status: 'error',
-  action: 'Use doctor or run.',
-  data: { receivedCommand: command || null },
-  error: { code: 'INVALID_COMMAND', message: 'Supported commands are doctor and run.', next: 'Run doctor first, then run.' }
-}, 1);
+function pickBestPool(pools, filter) {
+  let bestKey = null;
+  let bestYield = -Infinity;
+  for (const [key, value] of Object.entries(pools)) {
+    if (filter && !key.toLowerCase().includes(filter.toLowerCase())) continue;
+    const apy = Number(value?.apy);
+    if (Number.isFinite(apy) && apy > bestYield) {
+      bestYield = apy;
+      bestKey = key;
+    }
+  }
+  return { bestKey, bestYield };
+}
+
+(async () => {
+  try {
+    const url = 'https://app.bitflow.finance/api/apy-v2';
+    const currentPoolKey = arg('--current-pool', 'xyk-pool-sbtc-stx-v-1-1');
+    const threshold = Number(arg('--threshold', '10'));
+    const minDelta = Number(arg('--min-delta', '1'));
+    const filter = arg('--filter', 'xyk-pool');
+
+    const payload = await fetchJson(url);
+    const pools = payload?.data?.pools;
+    if (!pools || typeof pools !== 'object') {
+      throw new Error('No pools object found in live APY payload');
+    }
+
+    const currentPool = pools[currentPoolKey];
+    if (!currentPool) {
+      throw new Error(`Current pool not found: ${currentPoolKey}`);
+    }
+
+    const currentYield = Number(currentPool?.apy || 0);
+    if (!Number.isFinite(currentYield)) {
+      throw new Error(`Invalid current yield for pool: ${currentPoolKey}`);
+    }
+
+    const { bestKey, bestYield } = pickBestPool(pools, filter);
+    if (!bestKey || !Number.isFinite(bestYield)) {
+      throw new Error(`No valid pool found for filter: ${filter}`);
+    }
+
+    const action = decideYieldAction({ currentYield, bestYield, threshold, minDelta });
+    const output = {
+      status: 'success',
+      action,
+      data: {
+        source: 'live-bitflow-earn',
+        protocol: 'hodlmm',
+        filter,
+        currentPosition: {
+          pool: currentPoolKey,
+          currentYield
+        },
+        bestAlternative: {
+          pool: bestKey,
+          bestYield
+        },
+        policy: {
+          threshold,
+          minDelta
+        },
+        decision: action,
+        alert: action === 'alert' ? 'Current yield is deteriorating without a clearly superior filtered alternative.' : null,
+        rawSnippet: {
+          currentPool,
+          bestPool: pools[bestKey]
+        }
+      },
+      error: null
+    };
+
+    console.log(JSON.stringify(output, null, 2));
+  } catch (error) {
+    console.log(JSON.stringify({
+      status: 'error',
+      action: 'failed',
+      data: {},
+      error: error.message
+    }, null, 2));
+    process.exit(1);
+  }
+})();
