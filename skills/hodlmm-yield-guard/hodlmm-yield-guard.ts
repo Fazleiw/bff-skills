@@ -24,6 +24,7 @@ function fetchJson(url) {
 }
 
 function decideYieldAction({ currentYield, bestYield, threshold, minDelta }) {
+  if (currentYield < threshold && bestYield < threshold) return 'alert';
   if (currentYield < threshold) return 'rotate';
   if ((bestYield - currentYield) >= minDelta) return 'rotate';
   return 'stay';
