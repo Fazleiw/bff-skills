@@ -108,3 +108,4 @@ All outputs are JSON to stdout.
 - v1 is a pool-level guardrail, not a wallet-specific live position parser.
 - APY drawdown is a conservative heuristic based on live current APY versus the pool's recent max APY context exposed by Bitflow.
 - Proof output demonstrates deterministic decision packaging, not on-chain execution.
+- v1 intentionally favors conservative scope over broad feature surface.
