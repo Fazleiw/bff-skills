@@ -2,7 +2,7 @@ name: Publish Winner to AIBTC Skills
 
 # Triggers when a PR with the 'winner-approved' label is merged to main
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
     branches: [main]
 
