@@ -9,6 +9,8 @@ A position can be out of range without making a rebalance economically justified
 1. rebalancing too early under poor action quality
 2. waiting too long once the cost of inactivity clearly exceeds the quality-adjusted cost of acting
 
+That matters because downstream agents do not just need better measurement. They need a conservative decision gate that determines when waiting has become the more expensive mistake.
+
 ### What it reads
 The skill uses live HODLMM and wallet-specific reads to evaluate:
 - wallet position bins
@@ -27,13 +29,14 @@ One of four deterministic decisions:
 - `block`
 
 ### Why this is different from adjacent HODLMM skills
-This is not a dashboard, generic monitor, or broad optimizer.
+This is not a dashboard, generic monitor, broad optimizer, or measurement-only analyzer.
 
 - `hodlmm-risk` answers whether conditions are risky
 - `hodlmm-bin-guardian` answers whether a position is in range and whether baseline rebalance gates pass
+- analyzers tell you what the current state looks like
 - `hodlmm-cost-of-inaction-gate` answers whether acting now is economically more justified than waiting
 
-That makes it a reusable control primitive for downstream HODLMM rebalance workflows.
+That makes it a reusable downstream decision primitive for HODLMM rebalance workflows, not just another way to describe position state.
 
 ### Strongest proof in this PR
 #### 1) `rebalance_now`
@@ -65,3 +68,5 @@ It is intentionally narrower:
 
 ### Why agents need it
 If a downstream workflow adds only one economic control layer before touching a HODLMM position, this is the gate it should add.
+
+It does not merely estimate one loss surface. It decides whether inaction has become the costlier choice. That is a more downstream-critical question for any agent that must choose between waiting and intervention.
