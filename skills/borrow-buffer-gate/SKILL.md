@@ -22,7 +22,7 @@ It reads a wallet's borrowing state, compares the live health factor against exp
 - `top_up_soon`
 - `unacceptable`
 
-## Why this is useful
+## Why agents need it
 This is not a dashboard, portfolio tracker, or generic lending monitor.
 - it does not optimize strategy
 - it does not execute transactions
