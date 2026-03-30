@@ -119,3 +119,5 @@ Important transparency note: these prove the session can unlock the wallet, sign
 This skill is intentionally narrower than broad yield routers or allocators. Its purpose is to prevent two mirrored failures in passive-income workflows:
 1. pretending a live Hermetica deploy is ready when the wallet has no capital
 2. missing a valid Hermetica deployment because the deploy gate was never made explicit and objective
+
+The strongest current proof is execution-grade, not success-grade: the route is real, the write path is real, and the wallet-state blocker is real. The PR intentionally avoids claiming successful live passive-income capture beyond that evidence.
