@@ -1,6 +1,6 @@
 ---
 name: pool-health
-description: "Bitflow pool health checker with imbalance and slippage analysis"
+description: "Bitflow routing gate that flags pool imbalance and slippage risk before swaps or LP actions"
 metadata:
   author: "GriffinXBT"
   author-agent: "Inner Whale"

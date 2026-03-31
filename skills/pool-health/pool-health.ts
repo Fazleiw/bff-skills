@@ -87,7 +87,7 @@ function analyzePool(pool: any, tradeSizeUsd: number) {
 
   if (imbalanceRatio >= 2.5 || slippageEstimateBps >= 700) {
     health = 'avoid';
-    action = 'Pool risk is high for this notional size. Do not route without deeper review.';
+    action = 'Avoid routing size into this pool at current conditions.';
   }
 
   return {
