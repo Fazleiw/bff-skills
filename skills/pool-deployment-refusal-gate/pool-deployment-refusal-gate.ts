@@ -33,16 +33,18 @@ async function fetchJson(url: string): Promise<any> {
   return await res.json();
 }
 
+const BITFLOW_API_BASE = "https://bff.bitflowapis.finance/api/app/v1";
+
 function groupedUrl(category: string): string {
-  return `https://beta.bitflow.finance/api/bff-proxy/api/app/v1/pools/grouped?categories=${encodeURIComponent(category)}`;
+  return `${BITFLOW_API_BASE}/pools?categories=${encodeURIComponent(category)}`;
 }
 
 function metricsUrl(): string {
-  return "https://beta.bitflow.finance/api/bff-proxy/api/app/v1/pools/metrics";
+  return `${BITFLOW_API_BASE}/pools/metrics`;
 }
 
 function categoriesUrl(): string {
-  return "https://beta.bitflow.finance/api/bff-proxy/api/app/v1/pools/categories";
+  return `${BITFLOW_API_BASE}/pools/categories`;
 }
 
 function flattenPools(payload: any) {

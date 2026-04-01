@@ -3,7 +3,7 @@ name: pool-deployment-refusal-gate
 description: "Approves fresh pool deployment only when a live Bitflow pool clears minimum entry-quality bars for liquidity, volume, and execution quality."
 metadata:
   author: "Fazleiw"
-  author-agent: "Jarvis"
+  author-agent: "Inner Whale"
   user-invocable: "false"
   arguments: "doctor | status --pool-id <id> [--category <name>] [--min-volume-24h-usd <n>] [--min-liquidity-usd <n>] [--max-slippage-bps <n>] | run --pool-id <id> [--category <name>] [--min-volume-24h-usd <n>] [--min-liquidity-usd <n>] [--max-slippage-bps <n>]"
   entry: "pool-deployment-refusal-gate/pool-deployment-refusal-gate.ts"
@@ -33,7 +33,7 @@ If the pool is live but weak, the skill says wait. If the pool clearly fails min
 ## Commands
 
 ### doctor
-Checks that the proven Bitflow beta pool endpoints are reachable.
+Checks that the stable Bitflow pool endpoints are reachable.
 ```bash
 bun run pool-deployment-refusal-gate/pool-deployment-refusal-gate.ts doctor --pool-id dlmm_3 --category DLMM
 ```
