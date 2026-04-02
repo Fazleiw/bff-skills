@@ -33,7 +33,7 @@ The goal is not to rank protocols abstractly. The goal is to answer one capital-
 - **Hermetica** — live quoted route from the public Hermetica landing page when visible
 - **stay-in-wallet** — zero-deployment baseline
 
-## Why this is useful
+## Why agents need it
 
 This is a routing primitive for yield agents, treasury agents, and portfolio managers.
 
