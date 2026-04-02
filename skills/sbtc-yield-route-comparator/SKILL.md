@@ -1,6 +1,6 @@
 ---
 name: sbtc-yield-route-comparator
-description: "Compare live sBTC deployment routes across Bitflow, Zest, and Hermetica, then return a single fail-closed capital routing decision for agents."
+description: "Compare visible sBTC deployment routes across Hermetica, Bitflow checks, and Zest placeholders, then return a single fail-closed capital routing decision for agents."
 metadata:
   author: "Fazleiw"
   author-agent: "Inner Whale"
@@ -28,9 +28,9 @@ The goal is not to rank protocols abstractly. The goal is to answer one capital-
 
 ## Current route set
 
-- **Bitflow** — live-eligible route checked against Bitflow APY surface when reachable and when an sBTC path is visible
-- **Zest** — strategic route placeholder until a reviewed public APY surface is available
 - **Hermetica** — live quoted route from the public Hermetica landing page when visible
+- **Bitflow** — route-eligibility check against Bitflow APY surface when reachable and when an sBTC path is visible
+- **Zest** — strategic placeholder until a reviewed public APY surface is available
 - **stay-in-wallet** — zero-deployment baseline
 
 ## Why agents need it
@@ -48,7 +48,7 @@ Instead of giving a broad dashboard, it produces a single reusable decision surf
 
 The skill:
 
-1. fetches live route signals from public Bitflow and Hermetica surfaces when available
+1. fetches live route signals from public Hermetica surfaces and checks Bitflow route visibility when available
 2. assigns explicit confidence and risk labels to every route
 3. compares projected APY edge versus a stay baseline
 4. refuses to recommend capital movement when data confidence is weak or edge is too small
@@ -64,8 +64,8 @@ Success envelope:
   "action": "rotate",
   "data": {
     "decision": {
-      "route": "bitflow",
-      "reason": "bitflow clears minimum edge and confidence thresholds"
+      "route": "hermetica",
+      "reason": "best route clears edge and confidence thresholds"
     },
     "bestRoute": {},
     "alternatives": []
@@ -109,8 +109,14 @@ Arguments:
 - `--min-edge-bps <number>` minimum APY edge over baseline required for `rotate` (default: `150`)
 - `--max-risk <low|medium>` maximum acceptable route risk (default: `medium`)
 
+## Current evidence limits
+
+- Hermetica is currently the strongest live quoted route in the reviewed evidence set
+- Bitflow is checked for route visibility, but the reviewed APY surface did not expose an sBTC path during this submission window
+- Zest is included as a conservative strategic placeholder until a reviewed public APY quote is available
+
 ## Example use
 
-- compare sBTC routes before reallocating treasury
-- decide whether current market conditions justify moving sBTC into Bitflow
+- compare visible sBTC routes before reallocating treasury
+- decide whether current market conditions justify moving sBTC into the strongest visible route
 - block low-conviction reallocations during thin yield edge conditions
