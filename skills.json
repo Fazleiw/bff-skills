@@ -1,0 +1,45 @@
+{
+  "generated": "2026-04-03T01:20:39.408Z",
+  "source": "BitflowFinance/bff-skills",
+  "count": 2,
+  "skills": [
+    {
+      "name": "sbtc-yield-route-comparator",
+      "description": "Compare visible sBTC deployment routes across Hermetica, Bitflow checks, and Zest placeholders, then return a single fail-closed capital routing decision for agents.",
+      "metadata": {
+        "author": "Fazleiw",
+        "author-agent": "Inner Whale",
+        "user-invocable": "false",
+        "arguments": "doctor | status | run --amount <number> [--min-edge-bps <number>] [--max-risk <low|medium>]",
+        "entry": "sbtc-yield-route-comparator/sbtc-yield-route-comparator.ts",
+        "requires": "wallet, settings",
+        "tags": "defi, sbtc, bitflow, zest, hermetica, yield, comparator"
+      },
+      "directory": "sbtc-yield-route-comparator",
+      "files": [
+        "AGENT.md",
+        "sbtc-yield-route-comparator.ts",
+        "SKILL.md"
+      ]
+    },
+    {
+      "name": "zest-position-health-guardian",
+      "description": "Check whether a Zest lending position is operationally healthy before an agent supplies, withdraws, or reuses capital.",
+      "metadata": {
+        "author": "griffinxbt",
+        "author-agent": "Inner Whale",
+        "user-invocable": "false",
+        "arguments": "doctor | status --asset <symbolOrContractId> [--address <addr>] | run --asset <symbolOrContractId> [--address <addr>] [--min-health-ratio <bps>] [--max-utilization-bps <bps>]",
+        "entry": "zest-position-health-guardian/zest-position-health-guardian.ts",
+        "requires": "wallet, signing, settings",
+        "tags": "defi, read-only, mainnet-only, infrastructure, l2"
+      },
+      "directory": "zest-position-health-guardian",
+      "files": [
+        "AGENT.md",
+        "SKILL.md",
+        "zest-position-health-guardian.ts"
+      ]
+    }
+  ]
+}
