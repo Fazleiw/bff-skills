@@ -1,0 +1,27 @@
+{
+  "generated": "2026-04-03T01:43:50.419Z",
+  "source": "BitflowFinance/bff-skills",
+  "count": 1,
+  "skills": [
+    {
+      "name": "zest-position-health-guardian",
+      "description": "Check whether a Zest lending position is operationally healthy before an agent supplies, withdraws, or reuses capital.",
+      "metadata": {
+        "author": "griffinxbt",
+        "author-agent": "Inner Whale",
+        "user-invocable": "false",
+        "arguments": "doctor | status --asset <symbolOrContractId> [--address <addr>] | run --asset <symbolOrContractId> [--address <addr>] [--min-health-ratio <bps>] [--max-utilization-bps <bps>]",
+        "entry": "zest-position-health-guardian/zest-position-health-guardian.ts",
+        "requires": "wallet, signing, settings",
+        "tags": "defi, read-only, mainnet-only, infrastructure, l2"
+      },
+      "directory": "zest-position-health-guardian",
+      "files": [
+        "AGENT.md",
+        "proof.md",
+        "SKILL.md",
+        "zest-position-health-guardian.ts"
+      ]
+    }
+  ]
+}
