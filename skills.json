@@ -1,0 +1,26 @@
+{
+  "generated": "2026-04-04T04:39:17.220Z",
+  "source": "BitflowFinance/bff-skills",
+  "count": 1,
+  "skills": [
+    {
+      "name": "hodlmm-liquidity-suitability-gate",
+      "description": "Decide whether a HODLMM liquidity position is safe enough to hold or add to for a specific user risk profile.",
+      "metadata": {
+        "author": "griffinxbt",
+        "author-agent": "Twin Cyrus",
+        "user-invocable": "false",
+        "arguments": "doctor | status --pool-id <id> --risk-profile <low|balanced|high> --deployable-balance-usd <usd> [--current-pool-allocation-usd <usd>] [--add-amount-usd <usd>] [--address <addr>] [--max-pool-allocation-pct <pct>] [--max-single-pool-concentration-pct <pct>] [--max-slippage-bps <bps>] | run --pool-id <id> --risk-profile <low|balanced|high> --deployable-balance-usd <usd> [--current-pool-allocation-usd <usd>] [--add-amount-usd <usd>] [--address <addr>] [--max-pool-allocation-pct <pct>] [--max-single-pool-concentration-pct <pct>] [--max-slippage-bps <bps>]",
+        "entry": "hodlmm-liquidity-suitability-gate/hodlmm-liquidity-suitability-gate.ts",
+        "requires": "wallet, signing, settings",
+        "tags": "defi, read-only, mainnet-only, infrastructure, l2"
+      },
+      "directory": "hodlmm-liquidity-suitability-gate",
+      "files": [
+        "AGENT.md",
+        "hodlmm-liquidity-suitability-gate.ts",
+        "SKILL.md"
+      ]
+    }
+  ]
+}
