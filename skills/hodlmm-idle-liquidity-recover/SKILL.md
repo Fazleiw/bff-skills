@@ -1,63 +1,71 @@
 ---
 name: hodlmm-idle-liquidity-recover
-description: "Single-purpose HODLMM write skill to rescue out-of-range idle liquidity back into the active earning zone with one explicit move command"
+description: "Single-purpose HODLMM write skill to recover idle liquidity using one explicit move-relative-liquidity-multi transaction"
 metadata:
   author: "Fazleiw"
   author-agent: "Twin Cyrus"
   user-invocable: "false"
-  arguments: "doctor | scan | plan | run"
+  arguments: "doctor | scan | run | auto"
   entry: "hodlmm-idle-liquidity-recover/hodlmm-idle-liquidity-recover.ts"
   requires: "wallet, signing"
-  tags: "defi, write, hodlmm, mainnet-only, requires-funds"
+  tags: "defi, write, l2, mainnet-only, requires-funds"
 ---
 
 # HODLMM Idle Liquidity Recover
 
 ## What it does
-When a HODLMM position drifts out of the active earning range, this skill prepares one explicit rescue move back toward the active bin using `move-relative-liquidity-multi`. It is intentionally narrower than a full auto-rebalancer: one pool, one rescue action, one operator decision.
+Detects out-of-range HODLMM liquidity and (optionally) executes one atomic on-chain recovery move via `move-relative-liquidity-multi`.
 
 ## Why agents need it
-Winner patterns already cover broad auto-rebalancing, range management, and signal-gated allocation. Agents still need a smaller write primitive they can reason about safely: recover idle liquidity that has stopped earning without adopting a 24/7 management loop. This skill is the narrow rescue layer between passive monitoring and full autonomous position management.
+This is a narrow write primitive: one pool, one rescue plan, one transaction. It avoids “full position manager” complexity while still letting an operator/agent recover idle liquidity that has stopped earning.
 
 ## Safety notes
-- Writes to chain only when `--confirm` is provided.
+- Dry-run by default; broadcasts only with `--confirm`.
 - One pool per run.
-- Dry-run by default.
-- Uses one explicit rescue move plan rather than broad autonomous management.
-- Intended for mainnet HODLMM positions and requires a funded wallet.
+- Refuses broadcast if STX balance < 1.0 (gas floor).
+- 4-hour cooldown per pool (persisted state).
+
+Important post-conditions note:
+- The transaction uses `PostConditionMode.Allow` with `postConditions: []`.
+- Rationale: DLP burn + mint happens inside one router tx and cannot be expressed as simple sender-side post-conditions.
+- Mitigation: per-move slippage bounds in args (`min-dlp` >= 95%; `max-x/y-liquidity-fee` <= 5%) + strict plan construction + `--confirm` gate.
 
 ## Commands
-### doctor
-Check command wiring and write-path intent.
+- `doctor --wallet <STX>`
+- `scan --wallet <STX>`
+- `run --wallet <STX> --pool <id> --spread <n> [--force]` (dry-run)
+- `run --wallet <STX> --pool <id> --spread <n> --confirm --password <pass> [--force]` (broadcast)
+- `auto --wallet <STX> --password <pass> [--interval <m>] [--drift-threshold <bins>] [--spread <n>] [--max-moves <n>] [--once]`
 
-### scan
-Surface out-of-range positions once live pool scanning is wired.
+## Example commands
+```bash
+bun run skills/hodlmm-idle-liquidity-recover/hodlmm-idle-liquidity-recover.ts doctor --wallet <STX_ADDRESS>
+bun run skills/hodlmm-idle-liquidity-recover/hodlmm-idle-liquidity-recover.ts scan --wallet <STX_ADDRESS>
 
-### plan --pool <pool>
-Build one rescue plan for a single HODLMM pool.
+# Dry-run (safe)
+bun run skills/hodlmm-idle-liquidity-recover/hodlmm-idle-liquidity-recover.ts run --wallet <STX_ADDRESS> --pool dlmm_3 --spread 1
 
-### run --pool <pool> --confirm
-Execute one explicit rescue move after operator confirmation.
+# Mainnet write (dangerous; requires gas + explicit confirmation)
+bun run skills/hodlmm-idle-liquidity-recover/hodlmm-idle-liquidity-recover.ts run --wallet <STX_ADDRESS> --pool dlmm_3 --spread 1 --force --confirm --password <redacted>
+```
 
 ## Output contract
-All commands emit JSON only.
+All outputs are JSON to stdout.
 
-### doctor
+Registry-minimum error:
 ```json
-{"status":"success","action":"doctor","data":{"ready":true,"mode":"scaffold","primitive":"single_pool_idle_liquidity_recovery","write_path":"move-relative-liquidity-multi","confirm_required":true},"error":null}
+{ "error": "descriptive message" }
 ```
 
-### scan
+Success envelope (used by this skill):
 ```json
-{"status":"success","action":"scan","data":{"mode":"scaffold","pools_scanned":0,"positions_found":0,"out_of_range":0,"recommendation":"Wire live pool scan and wallet positions before production use"},"error":null}
+{ "status": "success|degraded|blocked", "action": "doctor|scan|run|auto", "data": { } }
 ```
 
-### plan
+Example (run executed):
 ```json
-{"status":"success","action":"plan","data":{"mode":"scaffold","pool":"dlmm_1","decision":"MOVE_NEEDED","action":"single_rescue_move","atomic":true,"contract_call":"move-relative-liquidity-multi","reason":"Idle liquidity rescue is scoped to one explicit move, not full active management"},"error":null}
+{ "status": "success", "action": "run", "data": { "decision": "EXECUTED", "transaction": { "txid": "<txid>", "explorer": "https://explorer.hiro.so/txid/<txid>?chain=mainnet" } } }
 ```
 
-### run (without --confirm)
-```json
-{"status":"success","action":"run","data":{"mode":"dry-run","pool":"dlmm_1","decision":"CONFIRM_REQUIRED","contract_call":"move-relative-liquidity-multi","reason":"Add --confirm to execute one rescue move"},"error":null}
-```
+## Proof
+This is a write skill: reviewers require a mainnet transaction link (Hiro Explorer or mempool.space) showing a successful `move-relative-liquidity-multi` execution.

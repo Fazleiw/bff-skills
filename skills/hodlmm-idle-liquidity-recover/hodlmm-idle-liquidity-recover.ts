@@ -177,23 +177,26 @@ async function fetchPools(): Promise<PoolMeta[]> {
   const list = (raw.data ?? raw.results ?? raw.pools ?? (Array.isArray(raw) ? raw : [])) as Record<string, unknown>[];
   // Bitflow App API uses snake_case fields. No camelCase fallbacks — fail loudly on schema change.
   return list.map((p) => ({
-    pool_id: String(p.pool_id ?? ""),
-    pool_contract: String(p.pool_token ?? ""),
-    token_x: String(p.token_x ?? ""),
-    token_y: String(p.token_y ?? ""),
-    token_x_symbol: String(p.token_x_symbol ?? "?"),
-    token_y_symbol: String(p.token_y_symbol ?? "?"),
-    token_x_decimals: Number(p.token_x_decimals ?? 8),
-    token_y_decimals: Number(p.token_y_decimals ?? 6),
-    active_bin: Number(p.active_bin ?? 0),
-    bin_step: Number(p.bin_step ?? 0),
+    pool_id: String(p.pool_id ?? p.poolId ?? ""),
+    // IMPORTANT: router expects a pool TRAIT contract principal.
+    // Bitflow App schema provides `poolContract` / `pool_contract` for this.
+    // Do NOT default to `pool_token` first (pool token != pool trait and can cause BadFunctionArgument).
+    pool_contract: String(p.poolContract ?? p.pool_contract ?? p.pool_token ?? ""),
+    token_x: String(p.token_x ?? p.tokenX ?? p.tokens?.tokenX?.contract ?? ""),
+    token_y: String(p.token_y ?? p.tokenY ?? p.tokens?.tokenY?.contract ?? ""),
+    token_x_symbol: String(p.token_x_symbol ?? p.tokenXSymbol ?? p.tokens?.tokenX?.symbol ?? "?"),
+    token_y_symbol: String(p.token_y_symbol ?? p.tokenYSymbol ?? p.tokens?.tokenY?.symbol ?? "?"),
+    token_x_decimals: Number(p.token_x_decimals ?? p.tokenXDecimals ?? p.tokens?.tokenX?.decimals ?? 8),
+    token_y_decimals: Number(p.token_y_decimals ?? p.tokenYDecimals ?? p.tokens?.tokenY?.decimals ?? 6),
+    active_bin: Number(p.active_bin ?? p.activeBin ?? p.active_bin_id ?? 0),
+    bin_step: Number(p.bin_step ?? p.binStep ?? 0),
   }));
 }
 
 async function fetchPoolBins(poolId: string): Promise<{ active_bin_id: number; bins: BinData[] }> {
   const raw = await fetchJson<Record<string, unknown>>(`${BITFLOW_QUOTES}/bins/${poolId}`);
   // Bitflow Quotes API uses snake_case fields. No camelCase fallbacks.
-  const activeBin = Number(raw.active_bin_id ?? 0);
+  const activeBin = Number(raw.active_bin_id ?? raw.activeBinId ?? 0);
   const bins = ((raw.bins ?? []) as Record<string, unknown>[]).map((b) => ({
     bin_id: Number(b.bin_id),
     reserve_x: String(b.reserve_x ?? "0"),
@@ -212,14 +215,14 @@ async function fetchUserPositions(poolId: string, wallet: string): Promise<UserB
   const bins = (raw.bins ?? []) as Record<string, unknown>[];
   return bins
     .filter((b) => {
-      const liq = BigInt(String(b.user_liquidity ?? b.liquidity ?? "0"));
+      const liq = BigInt(String(b.user_liquidity ?? b.userLiquidity ?? b.liquidity ?? "0"));
       return liq > 0n;
     })
     .map((b) => ({
-      bin_id: Number(b.bin_id),
-      liquidity: String(b.user_liquidity ?? b.liquidity ?? "0"),
-      reserve_x: String(b.reserve_x ?? "0"),
-      reserve_y: String(b.reserve_y ?? "0"),
+      bin_id: Number(b.bin_id ?? b.binId ?? 0),
+      liquidity: String(b.user_liquidity ?? b.userLiquidity ?? b.liquidity ?? "0"),
+      reserve_x: String(b.reserve_x ?? b.reserveX ?? "0"),
+      reserve_y: String(b.reserve_y ?? b.reserveY ?? "0"),
       price: String(b.price ?? "0"),
     }));
 }
@@ -355,6 +358,54 @@ function buildMovePositions(userBins: UserBin[], activeBin: number, spread: numb
 
 // ─── On-chain execution ───────────────────────────────────────────────────────
 
+async function fetchOnchainPoolTokens(
+  poolContract: string,
+  senderAddress: string
+): Promise<{ xTokenContract: string; yTokenContract: string }> {
+  const parts = poolContract.split(".");
+  if (parts.length !== 2) throw new Error(`Invalid pool contract format: ${poolContract}`);
+  const [poolAddr, poolName] = parts;
+
+  const { fetchCallReadOnlyFunction, cvToJSON } = await import("@stacks/transactions" as string);
+  const { STACKS_MAINNET } = await import("@stacks/network" as string);
+
+  const result = await fetchCallReadOnlyFunction({
+    contractAddress: poolAddr,
+    contractName: poolName,
+    functionName: "get-pool",
+    functionArgs: [],
+    senderAddress: senderAddress || "SP000000000000000000002Q6VF78",
+    network: STACKS_MAINNET,
+  });
+
+  const json = cvToJSON(result) as {
+    type?: string;
+    value?: {
+      type?: string;
+      value?: Record<string, { type?: string; value?: string }>;
+    };
+  };
+
+  const isResponse = json.type === "response" || String(json.type ?? "").startsWith("(response ");
+  const isOk = json.value?.type === "ok" || String(json.value?.type ?? "").startsWith("(tuple ");
+  if (!isResponse || !isOk) {
+    throw new Error(`get-pool failed for ${poolContract}`);
+  }
+
+  const tuple = json.value?.value ?? {};
+  const x = tuple["x-token"];
+  const y = tuple["y-token"];
+
+  if (!x?.value || !y?.value) {
+    throw new Error(`get-pool missing x-token/y-token for ${poolContract}`);
+  }
+
+  return {
+    xTokenContract: String(x.value),
+    yTokenContract: String(y.value),
+  };
+}
+
 async function executeMove(
   privateKey: string,
   pool: PoolMeta,
@@ -403,7 +454,7 @@ async function executeMove(
     postConditionMode: PostConditionMode.Allow,
     anchorMode: AnchorMode.Any,
     nonce,
-    fee: 50000n,
+    fee: 500000n,
   });
 
   const result = await broadcastTransaction({ transaction: tx, network: STACKS_MAINNET });
@@ -645,13 +696,19 @@ program
       }
 
       // 10. Execute — single atomic transaction
-      if (!opts.password) {
-        out("blocked", "run", null, "--password required with --confirm");
+      const password = opts.password || process.env.AIBTC_WALLET_PASSWORD;
+      if (!password) {
+        out("blocked", "run", null, "Password required (use --password or set AIBTC_WALLET_PASSWORD)");
         return;
       }
 
+      const onchain = await fetchOnchainPoolTokens(pool.pool_contract, wallet);
+      pool.token_x = onchain.xTokenContract;
+      pool.token_y = onchain.yTokenContract;
+      log(`Broadcast pool=${pool.pool_contract} token_x=${pool.token_x} token_y=${pool.token_y}`);
+
       log("Decrypting wallet...");
-      const keys = await getWalletKeys(opts.password);
+      const keys = await getWalletKeys(password);
       if (keys.stxAddress !== wallet) {
         out("error", "run", null, `Wallet address mismatch: expected ${wallet}, got ${keys.stxAddress}`);
         return;
